@@ -1,3 +1,8 @@
+DROP TABLE purchases
+DROP TABLE purchasers
+DROP TABLE products
+DROP TABLE providers
+
 CREATE TABLE IF NOT EXISTS providers(
 	id INTEGER PRIMARY KEY,
 	title VARCHAR(100) NOT NULL,
@@ -22,6 +27,7 @@ CREATE TABLE IF NOT EXISTS purchases(
 	provider_id INTEGER NOT NULL,
 	purchaser_id INTEGER NOT NULL,
 	amount INTEGER NOT NULL,
+	purchase_time TIMESTAMP,
 	
 	CONSTRAINT fk_product
       FOREIGN KEY(product_id) 

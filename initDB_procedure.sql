@@ -5,7 +5,7 @@ BEGIN
 	DELETE FROM providers;
     DELETE FROM products;
     DELETE FROM purchasers;
-	RAISE INFO 'Таблицы purchases, providers, products и purchasers были очищены'
+	RAISE INFO 'Таблицы purchases, providers, products и purchasers были очищены';
 
 	CALL providers_insert('Intel', 'Santa Clara');
 	CALL providers_insert('AMD', 'Santa Clara');

@@ -7,7 +7,7 @@ BEGIN
 	IF ((SELECT MAX(providers.id) from providers) > 0) THEN
 		id := (SELECT MAX(providers.id) from providers) + 1;
 	ELSE
-		id = 1;
+		id := 1;
 	END IF;
 
 	INSERT INTO providers VALUES(id, title, city);
@@ -26,7 +26,7 @@ BEGIN
 	IF ((SELECT MAX(purchasers.id) from purchasers) > 0) THEN
 		id := (SELECT MAX(purchasers.id) from purchasers) + 1;
 	ELSE
-		id = 1;
+		id := 1;
 	END IF;
 
 	IF current_deposit >= 0 THEN
@@ -49,7 +49,7 @@ BEGIN
     IF ((SELECT MAX(products.id) from products) > 0) THEN
 		id := (SELECT MAX(products.id) from products) + 1;
 	ELSE
-		id = 1;
+		id := 1;
 	END IF;
 
     IF quantity < 0 THEN
@@ -67,7 +67,7 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE 
-do_purchase(product_id INTEGER, provider_id INTEGER, purchaser_id INTEGER, amount INTEGER)
+do_purchase(product_id INTEGER, provider_id INTEGER, purchaser_id INTEGER, amount INTEGER, purchase_time TIMESTAMP DEFAULT NULL)
 AS $$
 DECLARE
 	cost INTEGER;
@@ -76,7 +76,7 @@ BEGIN
 	IF ((SELECT MAX(purchases.id) from purchases) > 0) THEN
 		id := (SELECT MAX(purchases.id) from purchases) + 1;
 	ELSE
-		id = 1;
+		id := 1;
 	END IF;
 
 	IF (amount <= 0) THEN
@@ -88,6 +88,12 @@ BEGIN
 	IF (SELECT quantity FROM products WHERE products.id = product_id) < amount THEN
 		RAISE EXCEPTION 'На складе недостаточно товара';
 	END IF;
+	IF purchase_time IS NULL THEN
+		purchase_time := current_timestamp;
+	END IF;
+	IF purchase_time > current_timestamp THEN
+		RAISE EXCEPTION 'Время покупки не может превышать текущее';
+	END IF;
 
 	cost := (SELECT price FROM products WHERE products.id = product_id) * amount;
 	UPDATE purchasers 
@@ -96,10 +102,10 @@ BEGIN
 	UPDATE products
 		SET quantity = quantity - amount
 		WHERE products.id = product_id;
-	INSERT INTO purchases VALUES(id, product_id, provider_id, purchaser_id, amount);
-	RAISE INFO 'Покупатель, %, совершил покупку % % в количестве %шт. Общая соимость: %$, текущий баланс покупателя: %, продукта осталось на складе: %',
+	INSERT INTO purchases VALUES(id, product_id, provider_id, purchaser_id, amount, purchase_time);
+	RAISE INFO 'Покупатель, %, совершил покупку % % в количестве %шт, %. Общая соимость: %$, текущий баланс покупателя: %, продукта осталось на складе: %',
 	(SELECT last_name || ' ' ||  first_name || ', с id: ' || CAST(purchasers.id AS VARCHAR(10)) FROM purchasers WHERE purchasers.id = purchaser_id), 
-	(SELECT title FROM providers WHERE providers.id = provider_id), (SELECT naming FROM products WHERE products.id = product_id), amount,
+	(SELECT title FROM providers WHERE providers.id = provider_id), (SELECT naming FROM products WHERE products.id = product_id), amount, purchase_time,
 	cost, (SELECT current_deposit FROM purchasers WHERE purchasers.id = purchaser_id), (SELECT quantity FROM products WHERE products.id = product_id);
 END
 $$ LANGUAGE plpgsql;		
