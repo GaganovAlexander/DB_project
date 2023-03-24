@@ -1,7 +1,7 @@
-DROP TABLE purchases
-DROP TABLE purchasers
-DROP TABLE products
-DROP TABLE providers
+DROP TABLE purchases;
+DROP TABLE purchasers;
+DROP TABLE products;
+DROP TABLE providers;
 
 CREATE TABLE IF NOT EXISTS providers(
 	id INTEGER PRIMARY KEY,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS purchases(
 	provider_id INTEGER NOT NULL,
 	purchaser_id INTEGER NOT NULL,
 	amount INTEGER NOT NULL,
-	purchase_time TIMESTAMP,
+	purchase_time TIMESTAMP NOT NULL,
 	
 	CONSTRAINT fk_product
       FOREIGN KEY(product_id) 
@@ -38,4 +38,19 @@ CREATE TABLE IF NOT EXISTS purchases(
 	CONSTRAINT fk_purchaser
       FOREIGN KEY(purchaser_id) 
 	  REFERENCES purchasers(id)
-)
+);
+
+CREATE TABLE IF NOT EXISTS supplies(
+	id INTEGER PRIMARY KEY,
+	provider_id INTEGER NOT NULL,
+	product_id INTEGER NOT NULL,
+	amount INTEGER NOT NULL,
+	supply_time TIMESTAMP NOT NULL,
+
+	CONSTRAINT fk_product
+      FOREIGN KEY(product_id) 
+	  REFERENCES products(id),
+	CONSTRAINT fk_procider
+      FOREIGN KEY(provider_id) 
+	  REFERENCES providers(id)
+);

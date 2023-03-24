@@ -103,7 +103,7 @@ BEGIN
 		SET quantity = quantity - amount
 		WHERE products.id = product_id;
 	INSERT INTO purchases VALUES(id, product_id, provider_id, purchaser_id, amount, purchase_time);
-	RAISE INFO 'Покупатель, %, совершил покупку % % в количестве %шт, %. Общая соимость: %$, текущий баланс покупателя: %, продукта осталось на складе: %',
+	RAISE INFO 'Покупатель, %, совершил покупку % % в количестве %шт, время покупки: %. Общая соимость: %$, текущий баланс покупателя: %, продукта осталось на складе: %',
 	(SELECT last_name || ' ' ||  first_name || ', с id: ' || CAST(purchasers.id AS VARCHAR(10)) FROM purchasers WHERE purchasers.id = purchaser_id), 
 	(SELECT title FROM providers WHERE providers.id = provider_id), (SELECT naming FROM products WHERE products.id = product_id), amount, purchase_time,
 	cost, (SELECT current_deposit FROM purchasers WHERE purchasers.id = purchaser_id), (SELECT quantity FROM products WHERE products.id = product_id);
