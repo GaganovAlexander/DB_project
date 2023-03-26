@@ -1,9 +1,12 @@
+-- Процедура добавления продавца
 CREATE OR REPLACE PROCEDURE 
 providers_insert(title VARCHAR(100), city VARCHAR(50))
 AS $$
 DECLARE
 	id INTEGER;
 BEGIN
+	-- id реализовано в виде простого целого числа, а автоприбавление 
+	-- идёт через реализацию процедуры. (Так во всех таблицах)
 	IF ((SELECT MAX(providers.id) from providers) > 0) THEN
 		id := (SELECT MAX(providers.id) from providers) + 1;
 	ELSE
@@ -16,7 +19,7 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-
+-- Процедура добавления покупателя
 CREATE OR REPLACE PROCEDURE 
 purchasers_insert(last_name VARCHAR(50), first_name VARCHAR(50), current_deposit NUMERIC(7, 2), surname VARCHAR(50) DEFAULT NULL)
 AS $$
@@ -29,17 +32,20 @@ BEGIN
 		id := 1;
 	END IF;
 
+	-- Так как на считу у покупателя не может быть отрицательный баланс - мы это проверяем
+	-- Далее то, на что проверятся данные, можно будет узнать из текста вызова исключения
 	IF current_deposit >= 0 THEN
 		INSERT INTO purchasers VALUES(id, last_name, first_name, surname, current_deposit);
 		RAISE INFO 'Был создан объект покупателя с атрибутами: id: %, ФИО: % % %, текущий счёт: %.',
 		id, last_name, first_name, surname, current_deposit;
+	-- Если введены неправельные данные - вызывается исключение
 	ELSE
 		RAISE EXCEPTION 'Депозит покупателя не может быть меньше 0';
 	END IF;
 END
 $$ LANGUAGE plpgsql;
 
-
+-- Процедура добавления продукта
 CREATE OR REPLACE PROCEDURE 
 products_insert(naming VARCHAR(50), quantity INTEGER, price NUMERIC(7, 2))
 AS $$
@@ -52,6 +58,7 @@ BEGIN
 		id := 1;
 	END IF;
 
+	-- Это блок проверки введённых данных, если они неправельные - то вызывается исключение и процедура завершается
     IF quantity < 0 THEN
 		RAISE EXCEPTION 'Количество не может быть меньше 0';
 	END IF;
@@ -59,53 +66,9 @@ BEGIN
 		RAISE EXCEPTION 'Цена не может быть меньше 0';
 	END IF;
 
+	-- В случае, если исключений не было - производится вставка
 	INSERT INTO products VALUES(id, naming, quantity, price);
 	RAISE INFO 'Был создан объект продукта с артибутами: id: %, название: %, количество: %, цена: %',
 	id, naming, quantity, price;
 END
 $$ LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE PROCEDURE 
-do_purchase(product_id INTEGER, provider_id INTEGER, purchaser_id INTEGER, amount INTEGER, purchase_time TIMESTAMP DEFAULT NULL)
-AS $$
-DECLARE
-	cost INTEGER;
-	id INTEGER;
-BEGIN
-	IF ((SELECT MAX(purchases.id) from purchases) > 0) THEN
-		id := (SELECT MAX(purchases.id) from purchases) + 1;
-	ELSE
-		id := 1;
-	END IF;
-
-	IF (amount <= 0) THEN
-		RAISE EXCEPTION 'Количество купленого товара должно быть больше 0';
-	END IF;
-	IF (SELECT current_deposit FROM purchasers WHERE purchasers.id = purchaser_id) < cost THEN
-		RAISE EXCEPTION 'У покупателя недостаточно денег';
-	END IF;
-	IF (SELECT quantity FROM products WHERE products.id = product_id) < amount THEN
-		RAISE EXCEPTION 'На складе недостаточно товара';
-	END IF;
-	IF purchase_time IS NULL THEN
-		purchase_time := current_timestamp;
-	END IF;
-	IF purchase_time > current_timestamp THEN
-		RAISE EXCEPTION 'Время покупки не может превышать текущее';
-	END IF;
-
-	cost := (SELECT price FROM products WHERE products.id = product_id) * amount;
-	UPDATE purchasers 
-		SET current_deposit = current_deposit - cost
-		WHERE purchasers.id = purchaser_id;
-	UPDATE products
-		SET quantity = quantity - amount
-		WHERE products.id = product_id;
-	INSERT INTO purchases VALUES(id, product_id, provider_id, purchaser_id, amount, purchase_time);
-	RAISE INFO 'Покупатель, %, совершил покупку % % в количестве %шт, время покупки: %. Общая соимость: %$, текущий баланс покупателя: %, продукта осталось на складе: %',
-	(SELECT last_name || ' ' ||  first_name || ', с id: ' || CAST(purchasers.id AS VARCHAR(10)) FROM purchasers WHERE purchasers.id = purchaser_id), 
-	(SELECT title FROM providers WHERE providers.id = provider_id), (SELECT naming FROM products WHERE products.id = product_id), amount, purchase_time,
-	cost, (SELECT current_deposit FROM purchasers WHERE purchasers.id = purchaser_id), (SELECT quantity FROM products WHERE products.id = product_id);
-END
-$$ LANGUAGE plpgsql;		

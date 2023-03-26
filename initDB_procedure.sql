@@ -1,13 +1,16 @@
+-- Процедура автоматического заполнения таблиц пробными данными
 CREATE OR REPLACE PROCEDURE initDB()
 AS $$
 BEGIN
+    -- Перед заполнением таблицы очищаются, начиная с тех, которые имеют внешние ключи
+	DELETE FROM supplies;
     DELETE FROM purchases;
 	DELETE FROM providers;
     DELETE FROM products;
     DELETE FROM purchasers;
-	DELETE FROM supplies;
 	RAISE INFO 'Таблицы purchases, providers, products, purchasers и supplies были очищены';
 
+	-- Заполняются они, в обратом порядке, сначала те, что без внешних ключей
 	CALL providers_insert('Intel', 'Santa Clara');
 	CALL providers_insert('AMD', 'Santa Clara');
 	CALL providers_insert('MSI', 'Zhonghe');

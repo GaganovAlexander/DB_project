@@ -1,3 +1,50 @@
+-- Процедура совершения покупки
+CREATE OR REPLACE PROCEDURE 
+do_purchase(product_id INTEGER, provider_id INTEGER, purchaser_id INTEGER, amount INTEGER, purchase_time TIMESTAMP DEFAULT NULL)
+AS $$
+DECLARE
+	cost INTEGER;
+	id INTEGER;
+BEGIN
+	IF ((SELECT MAX(purchases.id) from purchases) > 0) THEN
+		id := (SELECT MAX(purchases.id) from purchases) + 1;
+	ELSE
+		id := 1;
+	END IF;
+
+	IF (amount <= 0) THEN
+		RAISE EXCEPTION 'Количество купленого товара должно быть больше 0';
+	END IF;
+	IF (SELECT current_deposit FROM purchasers WHERE purchasers.id = purchaser_id) < cost THEN
+		RAISE EXCEPTION 'У покупателя недостаточно денег';
+	END IF;
+	IF (SELECT quantity FROM products WHERE products.id = product_id) < amount THEN
+		RAISE EXCEPTION 'На складе недостаточно товара';
+	END IF;
+	IF purchase_time IS NULL THEN
+		purchase_time := current_timestamp;
+	END IF;
+	IF purchase_time > current_timestamp THEN
+		RAISE EXCEPTION 'Время покупки не может превышать текущее';
+	END IF;
+
+    -- Помимо привычной вставки, тут так же проводится изменение таблиц покупателей и продуктов
+	cost := (SELECT price FROM products WHERE products.id = product_id) * amount;
+	UPDATE purchasers 
+		SET current_deposit = current_deposit - cost
+		WHERE purchasers.id = purchaser_id;
+	UPDATE products
+		SET quantity = quantity - amount
+		WHERE products.id = product_id;
+	INSERT INTO purchases VALUES(id, product_id, provider_id, purchaser_id, amount, purchase_time);
+	RAISE INFO 'Покупатель, %, совершил покупку % % в количестве %шт, время покупки: %. Общая соимость: %$, текущий баланс покупателя: %, продукта осталось на складе: %',
+	(SELECT last_name || ' ' ||  first_name || ', с id: ' || CAST(purchasers.id AS VARCHAR(10)) FROM purchasers WHERE purchasers.id = purchaser_id), 
+	(SELECT title FROM providers WHERE providers.id = provider_id), (SELECT naming FROM products WHERE products.id = product_id), amount, purchase_time,
+	cost, (SELECT current_deposit FROM purchasers WHERE purchasers.id = purchaser_id), (SELECT quantity FROM products WHERE products.id = product_id);
+END
+$$ LANGUAGE plpgsql;		
+
+-- Процедура пополнения счёта покупателя
 CREATE OR REPLACE PROCEDURE
 top_up_deposit(purchaser_id INTEGER, amount NUMERIC(7, 2))
 AS $$
@@ -18,7 +65,7 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-
+-- Процедура поставок товаров
 CREATE OR REPLACE PROCEDURE
 top_up_quantity(product_id INTEGER, provider_id INTEGER, amount INTEGER, supply_time TIMESTAMP DEFAULT NULL)
 AS $$
@@ -53,6 +100,7 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
+-- Процедура симуляции выполнения работы
 CREATE OR REPLACE PROCEDURE
 makejob()
 AS $$

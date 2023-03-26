@@ -1,8 +1,11 @@
-DROP TABLE purchases;
-DROP TABLE purchasers;
-DROP TABLE products;
-DROP TABLE providers;
+-- Перед созданием таблиц дропаем их, если они существуют
+DROP TABLE IF EXISTS purchases;
+DROP TABLE IF EXISTS supplies;
+DROP TABLE IF EXISTS purchasers;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS providers;
 
+-- Создание таблиц. Всё имеет говорящее название
 CREATE TABLE IF NOT EXISTS providers(
 	id INTEGER PRIMARY KEY,
 	title VARCHAR(100) NOT NULL,
