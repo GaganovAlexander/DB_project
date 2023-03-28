@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION
-products_turnover(start_time TIMESTAMP, stop_time TIMESTAMP) RETURNS TABLE
+products_suplies_and_sales(start_time TIMESTAMP, stop_time TIMESTAMP) RETURNS TABLE
 (
 	naming VARCHAR(50), 
 	title_or_full_name VARCHAR(153), 
@@ -41,6 +41,7 @@ WHERE
 END;
 $$ LANGUAGE plpgsql;
 
+
 CREATE OR REPLACE FUNCTION
 products_rating(start_time TIMESTAMP, stop_time TIMESTAMP) RETURNS TABLE
 (
@@ -64,5 +65,58 @@ WHERE
 	purchase_time <= stop_time
 GROUP BY p.naming
 ORDER BY rating desc;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION
+products_turnover(start_time TIMESTAMP, stop_time TIMESTAMP) RETURNS TABLE
+(
+	naming VARCHAR(50), 
+	amount_of_supplies BIGINT, 
+	providers_list TEXT,
+	sales_amount BIGINT,
+	purchasers_list TEXT,
+	profit NUMERIC
+)
+AS $$ 
+BEGIN
+RETURN QUERY SELECT  
+    t.naming, 
+    SUM(t.amount_of_supplies) amount_of_supplies, 
+    STRING_AGG(t.title, ', ') providers_list, 
+    SUM(t.sales_amount) sales_amount, 
+    STRING_AGG(t.full_name, ', ') purchasers_list,
+	SUM(t.profit) profit
+FROM (
+SELECT 
+    p.naming, 
+    NULL title, 
+	pr.last_name || ' ' || pr.first_name || ' ' || coalesce(pr.surname, '') full_name, 
+    0 amount_of_supplies, 
+    ps.amount sales_amount,
+    ps.amount * p.price profit,
+	ps.purchase_time ps_time
+FROM purchases ps
+JOIN products p ON p.id = ps.product_id
+JOIN purchasers pr ON pr.id = ps.purchaser_id
+UNION
+SELECT 
+    p.naming, 
+    pv.title, 
+    NULL,  
+    -s.amount, 
+    0,
+    -(s.amount * p.price),
+	supply_time
+FROM supplies s
+JOIN products p ON p.id = s.product_id
+JOIN providers pv ON pv.id = s.provider_id
+) t
+WHERE 
+	t.ps_time >= start_time
+	AND 
+	t.ps_time <= stop_time
+GROUP BY t.naming;
 END;
 $$ LANGUAGE plpgsql;
