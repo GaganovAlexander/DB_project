@@ -1,6 +1,68 @@
 CREATE OR REPLACE FUNCTION
-products_turnover() RETURNS TABLE(product_naming VARCHAR(50), f2 text)
+products_turnover(start_time TIMESTAMP, stop_time TIMESTAMP) RETURNS TABLE
+(
+	naming VARCHAR(50), 
+	title_or_full_name VARCHAR(153), 
+	purchase_or_suply_time TIMESTAMP,
+	amount INTEGER, 
+	cost NUMERIC
+)
 AS $$ 
-SELECT naming from products
-$$
-LANGUAGE SQL;
+BEGIN
+RETURN QUERY SELECT 
+	p.naming, 
+	t.title_or_full_name,
+	t.purchase_or_suply_time,
+	t.amount,
+	t.amount * p.price AS cost
+FROM 
+	(
+		SELECT 
+            purchases.product_id, 
+            CAST(p.last_name || ' ' || p.first_name || ' ' || coalesce(p.surname, '') AS VARCHAR(153)) AS title_or_full_name,
+            purchases.purchase_time AS purchase_or_suply_time, 
+            purchases.amount 
+        FROM purchases
+		JOIN purchasers p ON p.id = purchaser_id
+		UNION
+		SELECT 
+        s.product_id, 
+        CAST(pv.title AS VARCHAR(153)), 
+        s.supply_time, 
+        -s.amount 
+        FROM supplies s
+		JOIN providers pv ON pv.id = s.provider_id
+	) t
+JOIN products p ON p.id = t.product_id
+WHERE 
+	t.purchase_or_suply_time >= start_time
+	AND 
+	t.purchase_or_suply_time <= stop_time;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+products_rating(start_time TIMESTAMP, stop_time TIMESTAMP) RETURNS TABLE
+(
+	naming VARCHAR(50), 
+	amount BIGINT, 
+	num_of_purchasers BIGINT,
+	rating BIGINT
+)
+AS $$ 
+BEGIN
+RETURN QUERY SELECT  
+    p.naming, 
+    sum(ps.amount) amount, 
+    count(distinct ps.purchaser_id) num_of_purchasers,
+    count(*) rating
+FROM purchases ps
+JOIN products p ON p.id = ps.product_id
+WHERE 
+	purchase_time >= start_time 
+	AND 
+	purchase_time <= stop_time
+GROUP BY p.naming
+ORDER BY rating desc;
+END;
+$$ LANGUAGE plpgsql;
