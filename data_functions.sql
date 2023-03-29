@@ -84,9 +84,9 @@ BEGIN
 RETURN QUERY SELECT  
     t.naming, 
     SUM(t.amount_of_supplies) amount_of_supplies, 
-    STRING_AGG(t.title, ', ') providers_list, 
+    STRING_AGG(distinct t.title, ', ') providers_list, 
     SUM(t.sales_amount) sales_amount, 
-    STRING_AGG(t.full_name, ', ') purchasers_list,
+    STRING_AGG(distinct t.full_name, ', ') purchasers_list,
 	SUM(t.profit) profit
 FROM (
 SELECT 

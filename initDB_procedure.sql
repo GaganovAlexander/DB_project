@@ -40,10 +40,5 @@ BEGIN
 	CALL purchasers_insert('Ким', 'Чен Ын', 687.09);
 	CALL purchasers_insert('Трамп', 'Дональд', 798.67);
 	CALL purchasers_insert('Бибер', 'Джастин', 906.89);
-
-	CALL do_purchase(1, 1, 1, 10);
-	CALL do_purchase(3, 2, 3, 2);
-	CALL do_purchase(11, 7, 1, 3);
-	CALL do_purchase(7, 4, 7, 1);
 END
 $$ LANGUAGE plpgsql;

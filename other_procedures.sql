@@ -105,6 +105,10 @@ CREATE OR REPLACE PROCEDURE
 makejob()
 AS $$
 BEGIN
+	CALL do_purchase(1, 1, 1, 10);
+	CALL do_purchase(3, 2, 3, 2);
+	CALL do_purchase(11, 7, 1, 3);
+	CALL do_purchase(7, 4, 7, 1);
     CALL do_purchase(3, 2, 5, 1);
     CALL top_up_deposit(5, 1000);
     CALL top_up_quantity(3, 2, 35);
@@ -120,5 +124,8 @@ BEGIN
     CALL top_up_quantity(5, 3, 32);
     CALL do_purchase(7, 3, 1, 10);
     CALL do_purchase(11, 6, 1, 3);
+    CALL top_up_quantity(5, 4, 10);
+    CALL top_up_quantity(6, 4, 12);
+    CALL top_up_quantity(6, 3, 7);
 END
 $$ LANGUAGE plpgsql;
